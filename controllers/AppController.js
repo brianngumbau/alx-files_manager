@@ -1,5 +1,5 @@
-import redisClient from '../utils/redis.js';
-import dbClient from '../utils/db.js';
+import redisClient from '../utils/redis';
+import dbClient from '../utils/db';
 
 class AppController {
   // /status endpoint
@@ -15,7 +15,7 @@ class AppController {
   static async getStats(req, res) {
     const users = await dbClient.nbUsers();
     const files = await dbClient.nbFiles();
-    
+
     const stats = {
       users,
       files,

@@ -1,5 +1,6 @@
-//import { MongoClient } from 'mongodb';
+// import { MongoClient } from 'mongodb';
 import pkg from 'mongodb';
+
 const { MongoClient } = pkg;
 
 const DB_HOST = process.env.DB_HOST || 'localhost';
@@ -26,7 +27,7 @@ class DBClient {
       this.filesCollection = this.db.collection('files');
     } catch (error) {
       console.error('MongoDB connection error:', error);
-      this.db = null;  // Set db to null if there's a connection error
+      this.db = null; // Set db to null if there's a connection error
     }
   }
 
@@ -35,7 +36,7 @@ class DBClient {
    * @return {boolean} true if connection is alive or false if not
    */
   isAlive() {
-    return Boolean(this.db);  // Check if db is set
+    return Boolean(this.db); // Check if db is set
   }
 
   /**

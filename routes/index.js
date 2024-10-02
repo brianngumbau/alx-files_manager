@@ -21,6 +21,9 @@ router.get('disconnect', AuthController.getDisconnect);
 // Defining the /users/me endpoint
 router.get('/users/me', UsersController.getMe);
 
+router.get('/files/:id', FilesController.getShow);
+
+router.get('/files', FilesController.getIndex);
 // Defining the POST /users endpoint
 router.post('/users', UsersController.postNew);
 

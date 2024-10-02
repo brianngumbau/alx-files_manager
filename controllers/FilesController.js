@@ -2,11 +2,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { ObjectId } from 'mongodb';
+import mime from 'mime-types';
+import Queue from 'bull';
 import redisClient from '../utils/redis';
 import dbClient from '../utils/db';
-import mime from 'mime-types';
-import fs from 'fs';
 
+const fileQueue = new Queue('fileQueue');
 class FilesController {
   static async postUpload(req, res) {
     const token = req.header('X-Token');
@@ -31,7 +32,7 @@ class FilesController {
       if (parentFile.type !== 'folder') return res.status(400).json({ error: 'Parent is not a folder' });
     }
 
-    // folder creation
+    // Folder creation logic
     if (type === 'folder') {
       const newFolder = {
         userId: dbClient.objectID(userId),
@@ -51,7 +52,7 @@ class FilesController {
       });
     }
 
-    // file/image creation
+    // File or image creation logic
     const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
     await fs.mkdir(folderPath, { recursive: true });
 
@@ -69,6 +70,11 @@ class FilesController {
     };
 
     const result = await dbClient.db.collection('files').insertOne(newFile);
+
+    // Enqueue a job for thumbnail generation if the file is an image
+    if (type === 'image') {
+      fileQueue.add({ userId, fileId: result.insertedId.toString() });
+    }
 
     return res.status(201).json({
       id: result.insertedId,
@@ -210,12 +216,13 @@ class FilesController {
     const fileId = req.params.id;
     const token = req.headers['x-token'];
     const userId = await redisClient.get(`auth_${token}`);
+    const { size } = req.query;
 
     try {
       // Finding file document by ID
       const file = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId) });
 
-      // If file  does not exist
+      // If file does not exist
       if (!file) {
         return res.status(404).json({ error: 'Not found' });
       }
@@ -230,28 +237,40 @@ class FilesController {
         return res.status(404).json({ error: 'Not found' });
       }
 
+      let filePath = file.localPath;
+
+      // Handle size-based thumbnail request
+      if (size && ['100', '250', '500'].includes(size)) {
+        const thumbnailPath = `${filePath}_${size}`;
+        if (fs.existsSync(thumbnailPath)) {
+          filePath = thumbnailPath;
+        } else {
+          return res.status(404).json({ error: 'Thumbnail not found' });
+        }
+      }
+
       // Checking if the file exists on the local path
-      if (!fs.existsSync(file.localPath)) {
-        return res.status(404).json({ error: 'Not found' });
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'File not found' });
       }
 
       // Determine the MIME type of the file
-      const mimeType = mime.lookup(file.name);
+      const mimeType = mime.lookup(file.name) || 'application/octet-stream';
 
       // Reading the file content and send it with the correct MIME type
-      fs.readFile(file.localPath, (err, data) => {
+      return fs.readFile(filePath, (err, data) => {
         if (err) {
           return res.status(500).json({ error: 'Error reading file' });
         }
 
-        res.setHeader('Content-Type', mimeType || 'application/octet-stream');
-        res.send(data);
+        // Set the correct MIME type header and send the file data
+        res.setHeader('Content-Type', mimeType);
+        return res.status(200).send(data);
       });
-
     } catch (err) {
       return res.status(500).json({ error: 'Server error' });
     }
-  }  
+  }
 }
 
 export default FilesController;

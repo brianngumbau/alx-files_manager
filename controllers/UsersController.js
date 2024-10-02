@@ -12,6 +12,10 @@ class UsersController {
       return res.status(400).json({ error: 'Missing email' });
     }
 
+    if (!password) {
+      return res.status(400).json({ error: 'Missing password' })
+    }
+
     // checking if user already exists
     const existingUser = await dbClient.usersCollection.findOne({ email });
     if (existingUser) {

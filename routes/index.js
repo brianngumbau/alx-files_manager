@@ -24,6 +24,6 @@ router.get('/users/me', UsersController.getMe);
 // Defining the POST /users endpoint
 router.post('/users', UsersController.postNew);
 
-//Defining the POST /files endpoint
+// Defining the POST /files endpoint
 router.post('/files', FilesController.postUpload);
 export default router;

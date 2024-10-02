@@ -23,6 +23,9 @@ router.get('/users/me', UsersController.getMe);
 
 router.get('/files/:id', FilesController.getShow);
 
+//  route for getting file content
+router.get('/files/:id/data', FilesController.getFile);
+
 router.get('/files', FilesController.getIndex);
 // Defining the POST /users endpoint
 router.post('/users', UsersController.postNew);

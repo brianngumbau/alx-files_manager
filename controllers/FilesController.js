@@ -4,6 +4,8 @@ import path from 'path';
 import { ObjectId } from 'mongodb';
 import redisClient from '../utils/redis';
 import dbClient from '../utils/db';
+import mime from 'mime-types';
+import fs from 'fs';
 
 class FilesController {
   static async postUpload(req, res) {
@@ -29,7 +31,7 @@ class FilesController {
       if (parentFile.type !== 'folder') return res.status(400).json({ error: 'Parent is not a folder' });
     }
 
-    // Handle folder creation
+    // folder creation
     if (type === 'folder') {
       const newFolder = {
         userId: dbClient.objectID(userId),
@@ -49,7 +51,7 @@ class FilesController {
       });
     }
 
-    // Handle file or image creation
+    // file/image creation
     const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
     await fs.mkdir(folderPath, { recursive: true });
 
@@ -149,13 +151,13 @@ class FilesController {
       return res.status(404).json({ error: 'Not found' });
     }
 
-    // Update the isPublic field to true
+    // Updating the isPublic field to true
     await dbClient.db.collection('files').updateOne(
       { _id: ObjectId(fileId) },
       { $set: { isPublic: true } },
     );
 
-    // Fetch the updated file
+    // Fetching the updated file
     const updatedFile = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId) });
 
     return res.status(200).json({
@@ -184,13 +186,13 @@ class FilesController {
       return res.status(404).json({ error: 'Not found' });
     }
 
-    // Update the isPublic field to false
+    // Updating the isPublic field to false
     await dbClient.db.collection('files').updateOne(
       { _id: ObjectId(fileId) },
       { $set: { isPublic: false } },
     );
 
-    // Fetch the updated file
+    // Fetching updated file
     const updatedFile = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId) });
 
     return res.status(200).json({
@@ -203,6 +205,53 @@ class FilesController {
       localPath: updatedFile.localPath,
     });
   }
+
+  static async getFile(req, res) {
+    const fileId = req.params.id;
+    const token = req.headers['x-token'];
+    const userId = await redisClient.get(`auth_${token}`);
+
+    try {
+      // Finding file document by ID
+      const file = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId) });
+
+      // If file  does not exist
+      if (!file) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      // If file is a folder, return error
+      if (file.type === 'folder') {
+        return res.status(400).json({ error: "A folder doesn't have content" });
+      }
+
+      // If the file is not public and the user is not authenticated or not the owner
+      if (!file.isPublic && (!userId || file.userId.toString() !== userId)) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      // Checking if the file exists on the local path
+      if (!fs.existsSync(file.localPath)) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      // Determine the MIME type of the file
+      const mimeType = mime.lookup(file.name);
+
+      // Reading the file content and send it with the correct MIME type
+      fs.readFile(file.localPath, (err, data) => {
+        if (err) {
+          return res.status(500).json({ error: 'Error reading file' });
+        }
+
+        res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+        res.send(data);
+      });
+
+    } catch (err) {
+      return res.status(500).json({ error: 'Server error' });
+    }
+  }  
 }
 
 export default FilesController;

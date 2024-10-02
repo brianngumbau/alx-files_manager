@@ -2,6 +2,7 @@ import { Router } from 'express';
 import AppController from '../controllers/AppController';
 import UsersController from '../controllers/UsersController';
 import AuthController from '../controllers/AuthController';
+import FilesController from '../controllers/FileController';
 
 const router = Router();
 
@@ -22,4 +23,7 @@ router.get('/users/me', UsersController.getMe);
 
 // Defining the POST /users endpoint
 router.post('/users', UsersController.postNew);
+
+//Defining the POST /files endpoint
+router.post('/files', FilesController.postUpload);
 export default router;

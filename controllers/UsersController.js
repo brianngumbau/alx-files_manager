@@ -51,7 +51,7 @@ class UsersController {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const user = await dbClient.usersCollection.findOne({ _id: userId});
+    const user = await dbClient.usersCollection.findOne({ _id: userId });
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

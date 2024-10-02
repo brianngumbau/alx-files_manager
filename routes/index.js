@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import AppController from '../controllers/AppController';
 import UsersController from '../controllers/UsersController';
+import AuthController from '../controllers/AuthController';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.get('/connect', AuthController.getConnect);
 // Defining the /disconnect endpoint
 router.get('disconnect', AuthController.getDisconnect);
 
-//Defining the /users/me endpoint
+// Defining the /users/me endpoint
 router.get('/users/me', UsersController.getMe);
 
 // Defining the POST /users endpoint

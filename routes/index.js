@@ -29,4 +29,9 @@ router.post('/users', UsersController.postNew);
 
 // Defining the POST /files endpoint
 router.post('/files', FilesController.postUpload);
+
+router.put('/files/:id/publish', FilesController.putPublish);
+
+router.put('/files/:id/unpublish', FilesController.putUnpublish);
+
 export default router;

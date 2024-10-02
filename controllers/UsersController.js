@@ -1,5 +1,6 @@
 import sha1 from 'sha1';
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
 /**
  * UsersController for handling user-related requests
@@ -34,6 +35,28 @@ class UsersController {
     // respond with users id and email
     const userId = result.insertedId;
     return res.status(201).json({ id: userId, email });
+  }
+
+  // Method to get user details based on token
+  static async getMe(req, res) {
+    const token = req.headers['x-token'];
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.usersCollection.findOne({ _id: userId});
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    return res.status(200).json({ id: userId, email: user.email });
   }
 }
 
